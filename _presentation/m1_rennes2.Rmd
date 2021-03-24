@@ -1,0 +1,141 @@
+---
+title: "Hidden Markov models "
+subtitle: "for movement ecology"
+author: Marie-Pierre Etienne
+institute: "https://marieetienne.github.io/hmm_tutorial/"
+date: "Mars 2021"
+csl: "../resources/apa-no-doi-no-issue.csl"
+output:
+   xaringan::moon_reader:
+    css: [  'metropolis',  '../courses_tools/resources/mpe_pres.css']
+    lib_dir: libs
+    nature:
+      ratio: 16:10
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+      beforeInit: '../courses_tools/resources/collapseoutput.js'
+    includes:
+      after_body: '../courses_tools/resources/insert-logo.html'
+---
+
+
+
+```{r setup, include = FALSE,  eval = TRUE}
+main_dir <-  '..'
+common_img_dir <- file.path(main_dir,'courses_tools','resources', 'common_figs')
+course_img_dir <- file.path(main_dir,'resources', 'figs')
+BibOptions(check.entries = FALSE,
+           bib.style = "authoryear",
+           cite.style = "alphabetic",
+           style = "markdown",
+           hyperlink = FALSE,
+           dashed = FALSE)
+knitr::opts_chunk$set(out.width = '40%', fig.align = 'center', cache = TRUE)
+myBib <- ReadBib('bibliography.bib', check = FALSE)
+with_sol <- TRUE ## in order to control the output
+with_course <- TRUE
+```
+
+
+
+name: intro
+# Introduction
+
+---
+template: intro
+## Motivations
+
+### HMM General context
+
+Description of biological problems which 
+* vary in time,
+* present complex dependance,
+* are partially observed
+
+--
+
+Goal 
+
+* Understanding the dynamical process,
+* Predicting its evolution,
+* Inferring the hidden part.
+
+
+---
+template: intro
+## Motivations
+
+### Ecological context
+
+* Understanding space use,
+* Cheap GPS for recording positions, 
+* Movement patterns differ according to internal states.
+
+--
+
+Accounting for 
+
+* potential noise in recorded positions,
+* Shift in internal states.
+
+
+---
+template: intro 
+## HMM to address two different problems
+
+### Reconstructing the *true* movement: denoising
+From  noisy recorded positions, what is the most probable movement ? 
+
+Dolphin recorded positions, illustrations from  `r Citep(myBib, 'elwen2006range')`
+
+```{r dolphin, echo = FALSE, fig.align = 'center', fig.dim=c(12,8), out.width = '50%'}
+library(cowplot)
+library(ggplot2)
+
+p1 <- ggdraw() + draw_image(file.path(course_img_dir, "dolphin.png"))+ theme(plot.margin = unit(c(0, 0, 0, 0), "cm"))
+p2 <- ggdraw() + draw_image(file.path(course_img_dir, "Heaviside-Delphin.jpg"))+ theme(plot.margin = unit(c(0, 0, 0, 0), "cm"))
+
+plot_grid(p1, p2)
+
+```
+
+---
+template: intro 
+## HMM to address two different problems
+
+### Reconstructing the internal states
+
+```{r read_sim_chunk}
+  knitr::read_chunk("../resources/R/SimulationPath.R")
+```
+
+```{r pathPractical1, echo=FALSE, fig.show='hide', results='hide', cache=FALSE}
+```
+
+```{r pathPractical2, echo=FALSE, fig.show='hide', results='hide', cache=FALSE}
+```
+
+```{r pathPractical3, echo=FALSE, fig.show='hide', results='hide', cache=FALSE}
+```
+
+* **Inferring internal states**: Detect switch in movement pattern to reconstruct, the sequence of internal states 
+
+
+
+---
+template: intro 
+## Illustration 
+
+### Reconstructing the `true` movement
+
+ 
+
+---
+
+# References
+
+
+```{r refs, echo=FALSE, results="asis", eval = TRUE, cache = FALSE }
+PrintBibliography(myBib)
+```
