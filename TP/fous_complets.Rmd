@@ -1,6 +1,6 @@
 ---
-title: "Fous Sophie"
-author: "Marie-Pierre Etienne, Pierre Gloaguen"
+title: "Fous à pieds rouges"
+author: "Marie-Pierre Etienne, Pierre Gloaguen, Sophie Bertrand"
 date: "6/29/2020"
 output:
   pdf_document: 
@@ -67,7 +67,7 @@ Cette erraticité sera d'autant plus visible dans les métriques du mouvement qu
 Afin de corriger ces erreurs, on pose un modèle de Markov caché linéaire Gaussien tel que discuté dans la section précédente. 
 
 L'état caché est cette fois la vraie postion qui est supposée suivre un processus gaussien bivarié tel que
-$Z_k = Z_{k-1} + \delta + \E_{k}.$ L'observation consiste en une version bruitée de cette vraie trajectoire.
+$Z_k = Z_{k-1} + \delta + E_{k}.$ L'observation consiste en une version bruitée de cette vraie trajectoire.
 
 ```{r smooth}
 fou %>% ggplot() + 
@@ -377,138 +377,4 @@ depmix_fit_covariates <- depmixS4::fit(initial_model_covariates, verbose = FALSE
                             fixed = fixed_parameters,
                             emcontrol = em.control(crit = "absolute"))
 summary(depmix_fit_covariates, which = "transition")
-```
-
-```{r transition_covariates}
-load("depmix_fit_covariates.RData")
-betas <- purrr::map(depmix_fit_covariates@transition,
-             function(x) x@parameters$coefficients)
-get_probs <- function(beta_){
-  x_ <- seq(-1.75, 1.75, length.out = 1001)
-  my_X <- tibble(Int = rep(1, 1001), 
-                 x = x_,
-                 x2 = x^2) %>% 
-    as.matrix()
-  x_beta <- my_X %*% beta_
-  Pr1 <- apply(x_beta, 1, function(x) 1 / (1 + sum(exp(x[2:3]))))
-  Pr23 <- exp(x_beta[, 2:3]) * Pr1
-  cbind(Pr1, Pr23) %>% 
-    as.data.frame() %>% 
-    mutate(d = x_) %>% 
-    tidyr::pivot_longer(cols = -d,
-                        names_to = "to",
-                        values_to = "Prob") %>% 
-    mutate(to = factor(to, 
-                       levels = c("Pr1", "St2", "St3"),
-                       labels = paste0(1:3)))
-}
-map_dfr(betas, get_probs, .id = "from") %>% 
-  ggplot(aes(x = d, y = Prob)) +
-  facet_grid(from ~ to, switch = "y") +
-  geom_line() +
-  labs(x = "Distance au nid", y = "Probabilité de transition")
-```
-
-
-```{r}
-get_transtion_probability_prediction <- function(coeff1, coeff2, transition_name,
-                             metric,
-                             original_mean = mean_dw,
-                             original_sd = sd_dw,
-                             alpha = 0.05){
-  # REMARQUE
-  # Cette fonction est faite "à la main" et n'est pas très générique.
-  # Notamment, les indices pour les matrices de covariances ne marchent
-  # que pour ces modèles. De plus les objets fittés sont nommés comme
-  # dans ce code.
-  if(metric == "Vitesse bivariée"){
-    beta_cov_matrix <- vcov(depmix_fit)$vcov[1:4, 1:4]
-  }
-  if(metric == "Longueur/Angle"){
-    beta_cov_matrix <- ginv(moveHMM_fit$mod$hessian)[11:14, 11:14]
-  }
-  if(transition_name == "1 -> 2"){
-    cov_mat <- beta_cov_matrix[1:2, 1:2]
-  }
-  if(transition_name == "2 -> 1"){
-    cov_mat <- beta_cov_matrix[3:4, 3:4]
-  }
-  xs <- seq(-1, 3.8, length.out = 401) # Gamme de valeurs des données
-  linked_response <- coeff1 + coeff2 * xs
-  design_mat <- matrix(c(rep(1, length(xs)), xs), ncol = 2)
-  linked_prediction_variances <- sapply(xs, function(x){
-    t(c(1, x)) %*% cov_mat %*% c(1, x)
-  })
-  response <- 1 / (1 + exp(-linked_response))
-  # Application de la delta methode
-  response_variances <- exp(-2 * linked_response) / (1 + exp(-linked_response))^4 *
-    linked_prediction_variances
-  qtl <- qnorm(1 - alpha * 0.5) # quantile au niveau 1 - alpha / 2
-  tibble(dist_water = xs * original_sd + original_mean,
-         proba_est = response,
-         CI_low = response - qtl * sqrt(response_variances),
-         CI_sup = response + qtl * sqrt(response_variances),
-         metric = metric,
-         transition = transition_name)
-}
-```
-
-```{r}
-n_states <- 6
-set.seed(123)
-initial_model_J6 <- depmixS4::depmix(list(v_p ~ 1, v_r ~ 1), data = depmix_data, 
-                                                nstates = n_states,
-                         family = list(gaussian(), gaussian()), ntimes = n_times,
-                         respstart = get_init_depmix(depmix_data, nbStates = n_states),
-                         initdata = rep(1/n_states,n_states),
-                         transition = ~ 1)
-depmix_fit_J6 <- depmixS4::fit(initial_model_J6,
-                            verbose = FALSE, 
-                            emcontrol = em.control(crit = "relative"))
-depmix_fit_J6
-rank_vector_depmix_J6 <-  posterior(depmix_fit_J6) %>% 
-  dplyr::select(state) %>% 
-  mutate(step = depmix_data$step) %>% 
-  group_by(state) %>% 
-  summarise(mean_step = mean(step, na.rm = T)) %>% 
-  arrange(state) %>% 
-  pull(mean_step) %>% 
-  rank()
-depmix_states_J6 <- posterior(depmix_fit_J6) %>% 
-  rename(Predicted_state = state) %>% # So that it do not start with s
-  rename_at(.vars = vars(starts_with("S")), 
-            function(name) paste0("State",rank_vector_depmix_J6[str_extract(name, "[[::0-9::]]") %>%
-                                                               as.numeric()])) %>% 
-  mutate(Predicted_state = rank_vector_depmix_J6[Predicted_state]  %>% 
-           factor(levels = 1:n_states)) %>% 
-  bind_cols(depmix_data, .) %>% 
-  # rename(Easting = x, Northing = y) %>% 
-  as_tibble() %>% 
-  mutate(metric = "Vitesse bivariée")
-
-
-p1 <- depmix_states_J6 %>% 
-  group_by(ID, metric) %>%
-  mutate(Next_East = lead(x), Next_North = lead(y)) %>% 
-  ggplot(aes(x = x, y = y)) +
-  # geom_point(aes(y = Value, color = Predicted_state)) + 
-  geom_segment(aes(xend = Next_East, yend = Next_North,
-                   color = Predicted_state, 
-                   group = interaction(metric, ID, linetype = ID))) +
-  # geom_point(aes(y = Value, color = Predicted_state)) +
-  labs(color = "Etat prédit", 
-       title = "Trajectoires") +
-  theme(axis.title = element_blank(), axis.text = element_blank(), 
-        axis.ticks = element_blank())
-
-p2 <- depmix_states_J6 %>% 
-  ggplot(aes(x = step)) + 
-  geom_density(aes(fill = Predicted_state), alpha = 0.5) +
-  labs(y = "Densité estimée", x = "", title = "Longueurs de pas",
-       fill = "Etat prédit") +
-  scale_fill_discrete()
-```
-
-```{r plot_6states}
-gridExtra::grid.arrange(p1, p2, nrow = 2)
 ```

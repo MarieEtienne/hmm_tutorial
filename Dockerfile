@@ -16,9 +16,9 @@ RUN R -e "install.packages('GGally')"
 RUN R -e "install.packages('gganimate')"
 RUN R -e "install.packages('plotly')"
 RUN R -e "install.packages('magick')"
-RUN R -e "remotes::install_github('MarieEtienne/coursesdata')"
 RUN R -e "install.packages('ggfortify')"
 RUN R -e "install.packages('CircStats')"
+RUN R -e "remotes::install_github('MarieEtienne/coursesdata')"
 
 
 
