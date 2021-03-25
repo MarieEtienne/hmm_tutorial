@@ -29,16 +29,133 @@ class: center, middle, inverse, title-slide
 
 name: intro
 # Introduction
+---
+template: intro
+## Movement Ecology
+
+.care[Definition: ] The study of the mechanisms responsible for the movement of individuals.
+
+--
+### Identifying patterns in trajectories for
+* smoothing trajectories,
+* inferring behaviours from trajectories,
+* trajectories clustering,
+* (understanding the use of  space ).
+
+
+
+---
+count: false
+template: intro
+## Movement Ecology
+
+### Smoothing trajectories
+
+
+&lt;img src="m1_rennes2_files/figure-html/dolphin-1.png" width="50%" style="display: block; margin: auto;" /&gt;
+
+.center[Dolphin recorded positions, illustrations from  [Elw+06]]
+
+.care[Goal: ] Given  noisy recorded positions, recovering most probable movement? 
+---
+count: false
+template: intro
+## Movement Ecology
 
 ---
 template: intro
-## Motivations
+## Movement ecology data
 
-### HMM General context
+### Inferring behaviors
 
-Description of biological problems which 
+
+
+
+
+&lt;img src="m1_rennes2_files/figure-html/pathPractical2-1.png" width="40%" style="display: block; margin: auto;" /&gt;
+
+
+---
+template: intro
+## Movement ecology data
+
+### Inferring behaviors
+
+&lt;img src="m1_rennes2_files/figure-html/pathPractical3-1.png" width="40%" style="display: block; margin: auto;" /&gt;
+
+
+.care[Goal:]  Identifying the diving events or ARS (Area-Restricted search).
+---
+count: false
+template: intro
+## Movement Ecology
+
+### Clustering trajectories
+
+
+&lt;img src="../resources/figs/MapAllTraj2.png" width="40%" style="display: block; margin: auto;" /&gt;
+
+.center[African penguin data courtesy of Antje Steinfurth]
+
+.care[Goal:]  Clustering individuals according to their feeding strategy.
+
+
+---
+template: intro
+## Recording movement - tagging animals
+
+
+&lt;img src="m1_rennes2_files/figure-html/tagging-1.png" width="50%" style="display: block; margin: auto;" /&gt;
+
+.center[GPS tag on a Peruvian booby. (Sophie Bertrand)]
+
+---
+template: intro
+## Movement ecology data
+
+  A trajectory is, at least, a set of recorded location (relocations),
+
+
+
+time | long | lat
+--|--|--
+ `\(t_0\)` | `\(x_0\)` | `\(y_0\)`
+... | ... | ...
+ `\(t_n\)` | `\(x_n\)` | `\(y_n\)`
+
+--
+
+.care[Precision of the relocations] Highly dependant of the technology
+
+* GLS (very unprecise, for fish and marine animals)
+* Argos (unprecise, data are transmitted to satellite)
+--
+
+* *GPS* (precise, data are stored)
+
+
+
+---
+template: intro
+## Movement ecology data
+
+### Our case study 
+
+&lt;img src="../resources/figs/sula_sula.jpg" width="20%" height="50%" style="display: block; margin: auto;" /&gt;
+
+
+
+---
+name: model
+# Hidden Markov Model
+
+---
+template: model
+## General context
+
+Modelling  (biological) problems which 
 * vary in time,
-* present complex dependance,
+* present complex dependence,
 * are partially observed
 
 --
@@ -51,94 +168,358 @@ Goal
 
 
 ---
-template: intro
-## Motivations
+template: model
 
-### Ecological context
+## Markov model 
 
-* Understanding space use,
-* Cheap GPS for recording positions, 
-* Movement patterns differ according to internal states.
+The sequence `\((Z_0,\ldots,Z_n)\)` taking values in a state space `\(\mathcal{S}\)` is a Markov chain if it verifies
+
+`$$\mathcal{L}_{Z_k \vert Z_{0:k-1}} = \mathcal{L}_{Z_k \vert Z_{k-1}},$$`
+where `\(Z_{0:k}\)` stands for the sequence `\(Z_0, \ldots, Z_k\)`.
+
+If `\(\mathcal{L}_{Z_k \vert Z_{k-1}}\)` does not depend on `\(k\)`, the chain is said *stationary*.
 
 --
 
-Accounting for 
+A stationary Markov chain is described by 
+* its initial distribution `\(\nu\)` (a probability distribution on  `\(\mathcal{S}\)`),
+* its transition kernel `\(\mathbb{P}i(,)\)`
 
-* potential noise in recorded positions,
-* Shift in internal states.
-
-
----
-template: intro 
-## HMM to address two different problems
-
-### Reconstructing the *true* movement: denoising
-From  noisy recorded positions, what is the most probable movement ? 
-
-Dolphin recorded positions, illustrations from  [Elw+06]
-
-&lt;img src="m1_rennes2_files/figure-html/dolphin-1.png" width="50%" style="display: block; margin: auto;" /&gt;
 
 ---
-template: intro 
-## HMM to address two different problems
+template: model
 
-### Reconstructing the internal states
+## Stationary Markov model example
+
+If the state space is finite with `\(L\)` elements, `\(\mathcal{S} = \left\lbrace s_1, s_2, s_L\right\rbrace\)`, then
+
+* `\(\nu(k) =\mathbb{P}(Z_0=k)\)`
+* `\(\mathbb{P}i(i,j)=\mathbb{P}(X_k=j\vert X_{k-1}=i)\)` the transition matrix
+
+--
+
+Consequences
+
+* Probabilité d'observer une séquence
+  `$$\mathbb{P}(Z_0= z_0, Z_1=z_1, \ldots, Z_n = z_n) = \nu(z_0)\mathbb{P}i(z_0, z_1)\ldots \mathbb{P}i(z_{n-1}, z_n).$$`
+
+* Probabilité d'être dans l'état `\(k\)` à l'instant `\(n\)`
+`$$\mathbb{P}( Z_k = z_k) = \nu\mathbb{P}i^{k} (z_k).$$`
+
+
+--
+Example : 
+`$$\mathcal{S}=\left\lbrace A, B, C\right\rbrace,$$`
+`$$\nu =\left (0.1, 0.6, 0.3\right)^T$$`
+
+`$$\mathbb{P}i = \begin{pmatrix} 
+0.9 &amp; 0.1 &amp; 0 \\
+0.1 &amp; 0.7 &amp; 0.2 \\
+0.1 &amp; 0.1 &amp; 0.8 \\
+\end{pmatrix}$$`
+
+---
+template: model
+
+## A two layers model
+
+* *Hidden layer* A sequence `\(Z_{0:n}\)` models the sequence of activities and is assumed to follow a Markov chain.
+
+* *Observation layer* `\(Y_{0:n}\)` is defined conditionnally on `\(Z_{0:n}\)`
+`$$Y_k \vert Z_k=i \sim g_{\gamma_i}(.)$$`
+
+
+The full model is defined by `\(\theta=(\nu,\mathbb{P}i,\gamma).\)`
+--
+
+A simple example:
+
+* The hidden layer is given by `\((\mathcal{S},\nu,\mathbb{P}i)\)`
+
+* The observation layer
+
+`$$Y_k \vert Z_k = x\sim \mathcal{N}(\mu_x, \sigma^2_x), \quad x=A,B,C.$$`
+---
+template: model
+
+## A two layers model
+
+### Illustration
+
 
 
 ```r
-  knitr::read_chunk("../resources/R/SimulationPath.R")
+nu    &lt;- c(0.1, 0.6, 0.3)
+Pi_mat  &lt;- matrix( c(0.9, 0.1, 0, 0.1, 0.7, 0.2, 0.1, 0.1, 0.8), byrow = TRUE, ncol=3)
+mu    &lt;- c(10, 4, -2)
+sigma &lt;- c(2, 3 , 1)
 ```
 
-
-```
-## Loading required package: MASS
-```
-
-```
-## 
-## Attaching package: 'MASS'
-```
-
-```
-## The following object is masked from 'package:dplyr':
-## 
-##     select
-```
-
-```
-## The following object is masked from 'package:plotly':
-## 
-##     select
-```
-
-```
-## Loading required package: boot
-```
-
-```
-## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
-```
-
-```
-## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
-```
+---
 
 
 
 
 
-* **Inferring internal states**: Detect switch in movement pattern to reconstruct, the sequence of internal states 
+
+
+
+
+```r
+for(i in 1:N){ Y[i] &lt;- rnorm(1, mean = mu[Z[i]], sd = sigma[Z[i]])} #BREAK
+dta &lt;- dta %&gt;% mutate(obs = Y)
+dta %&gt;% ggplot() + geom_point(aes(x=indice, y = obs)) #BREAK
+```
+
+&lt;img src="m1_rennes2_files/figure-html/example_obs-1.png" width="40%" style="display: block; margin: auto;" /&gt;
+
+---
+
+
+
+```r
+dta %&gt;% ggplot() + geom_point(aes(x=indice, y = obs, col = factor(hidden))) 
+```
+
+&lt;img src="m1_rennes2_files/figure-html/example_obs_hid-1.png" width="40%" style="display: block; margin: auto;" /&gt;
+
 
 
 
 ---
-template: intro 
-## Illustration 
+template: model
 
-### Reconstructing the `true` movement
+## A two layers model - Directed Acyclic Graph
 
  
+* *Hidden layer* A sequence `\(Z_{0:n}\)` models the sequence of activities and is assumed to follow a Markov chain defined by  `\((\mathcal{S},\nu,\mathbb{P}i)\)`
+
+
+* *Observation layer* `\(Y_{0:n}\)` is defined conditionnally on `\(Z_{0:n}\)`
+`$$Y_k \vert Z_k=i \sim g_{\theta_i}(.)$$`
+
+
+
+
+&lt;img src="../resources/figs/Dag3.png" width="30%" style="display: block; margin: auto;" /&gt;
+
+
+
+
+
+---
+template: model
+## Example of states decoding 
+
+
+&lt;img src="../resources/figs/jane_1583_f4.gif" width="60%" height="40%" style="display: block; margin: auto;" /&gt;
+
+
+.center[Southern bluefin tuna : resident or migrant ? Figure from Patterson, Basson, Bravington, and Gunn [Pat+09]]
+
+
+
+
+
+
+
+---
+name: stat
+# Statistics of HMM
+
+---
+template: stat
+
+## Statistical inference of incomplete data models 
+
+
+### Problem 1. Compute likelihood 
+
+Integration over the hidden states is not tractable in practice
+
+`$$\mathbb{P}_{\theta} (Y_{0:n}) =   \sum_{Z_{0:n}\in\mathcal{S}^{n+1}} \mathbb{P}_{\theta}(Y_{0:n}, Z_{0:n})$$`
+Sum over `\(K^N\)` terms
+
+--
+
+.care[ Solution :] Filtering approach. `\(\alpha_k(j) := \mathbb{P}_{\theta}(Y_{0:k}, Z_k = s_j )\)`
+
+`$$\alpha_k(j) = \sum_{s\in\mathcal{S} }\mathbb{P}_{\theta}(Y_{0:k}, Z_{k-1}=s , Z_k = s_j ) = \sum_{s\in\mathcal{S} }\mathbb{P}_{\theta}(Y_k\vert Z_k=s_j)\mathbb{P}_{\theta}(Y_{0:k-1}, Z_k Z_{k-1}=s_i)$$`
+`$$\alpha_k(j) = \sum_{s\in\mathcal{S} } \alpha_{k-1}(i) g_{\theta_j}(y_k) \Pi(s,j).$$`
+`$$\mathbb{P}_{\theta} (Y_{0:n}) =\sum_{j\in \mathcal{S}} \alpha_{j}.$$`
+
+`\(N*K^2\)` operations. Filter
+
+
+---
+template: stat
+
+## Statistical inference of incomplete data models 
+
+
+### Problem 2. Maximising log likelihood
+
+* Numerical optimization
+* Expectation-Maximization algorithm: 
+
+`$$\mathbb{E} \left( \log \mathbb{P}_{{ \gamma, \mathbb{P}i, \nu}}(Y_{0:n}, Z_{0:n})\vert Y_{0:n} \right)$$`
+
+
+
+---
+template: stat
+
+## EM : Back to Bayes Formula 
+
+.pull-left[
+&lt;img src="../resources/figs/ModHierarchical2.png" width="30%" style="display: block; margin: auto;" /&gt;
+]
+
+.pull-right[
+Let  `\(\mathbb{P}_{\theta}(Y_{0:n},Z_{0:n})\)` be the complete likelihood.\\
+Classical conditioning gives:
+
+`$$\mathbb{P}_{\theta}(Y_{0:n},Z_{0:n})=\mathbb{P}_{\theta}(Y_{0:n} \vert Z_{0:n})\mathbb{P}_{\theta}(Z_{0:n})$$`
+
+.care[ But ]
+`$$\mathbb{P}_{\theta}(Y_{0:n},Z_{0:n})=\mathbb{P}_{\theta}(Z_{0:n}\vert Y_{0:n})\mathbb{P}_{\theta}(Y_{0:n})$$`
+
+and 
+
+`$$\ln \mathbb{P}_{\theta}(Y_{0:n})= \ln \mathbb{P}_{\theta}(Y_{0:n},Z_{0:n})- \ln \mathbb{P}_{\theta}(Z_{0:n}\vert Y_{0:n})$$`
+
+]
+
+Integrating with respect to  `\(\mathbb{P}_{\theta'}(Z_{0:n}\vert Y_{0:n})\)`,
+
+`$$\ln{\mathbb{P}_{\theta}(Y_{0:n})}  = \mathbb{E}_{\theta'}\left\lbrace\ln{\mathbb{P}_{\theta}(Z_{0:n},  Y_{0:n})} \vert Y_{0:n}\right\rbrace-\mathbb{E}_{\theta'}\left\lbrace \ln {\mathbb{P}_{\theta}(Z_{0:n}\vert Y_{0:n})} \vert Y_{0:n}\right\rbrace = Q(\theta,\theta')-H(\theta,\theta')$$`
+
+
+
+---
+template: stat
+
+## Expection Maximization
+
+
+`$$\ln{\mathbb{P}_{\theta}(Y_{0:n})}=Q(\theta,\theta')-H(\theta,\theta')$$`
+
+--
+.care[Remark] 
+
+`$$\ln{\mathbb{P}_{\theta}(Y_{0:n})} -\ln{\mathbb{P}_{\theta'}(Y_{0:n})}   =\left(  Q(\theta,\theta^{\prime})-Q(\theta^{\prime},\theta^{\prime})\right)+\left(  H(\theta^{\prime},\theta^{\prime})-H(\theta,\theta^{\prime})\right).$$`
+--
+
+But `\(\theta\mapsto H(\theta,\theta^{\prime})\)` achieves its maximum in  `\(\theta'\)`.
+
+Increasing Q, increases  `\(\ln{\mathbb{P}_{\theta}(Y_{0:n})}\)`.
+
+--
+
+**EM  algorithm:** iteration from  `\(\theta^{k}\longrightarrow \theta^{k+1}\)`
+
+1.  E step:   computing  `\(Q(\theta,\theta^{k})\)` 
+2.  M step : finding `\(\theta^{k+1}=\mathtt{argmax}\, Q(\theta,\theta^{k})\)`
+
+
+
+---
+
+
+
+&lt;img src="../resources/figs/lion.jpg" width="60%" style="display: block; margin: auto;" /&gt;
+
+
+
+---
+template: stat
+
+## Expection Maximization : intuition on the simple example
+
+If `\(Z_{0:n}\)` was known, we would estimate `\(\mu_i\)` by
+
+`$$\hat{\mu}_i = \frac{\sum_{k=0}^n Y_k 1_{Z_k = i}}{\sum_{k=0}^n 1_{Z_k = i} },$$`
+With EM algo, at step `\(\ell\)`
+
+
+`$$\hat{\mu}^{\ell+1}_i = \frac{\sum_{k=0}^n Y_k \mathbb{P}_{\theta^\ell}(Z_k = i\vert Y_{0:n})}{\sum_{k=0}^n \mathbb{P}_{\theta^\ell} (Z_k = i\vert Y_{0:n}) },$$`
+---
+
+
+
+&lt;img src="../resources/figs/tiger.jpg" width="30%" style="display: block; margin: auto;" /&gt;
+
+
+---
+template: stat
+
+## Statistical inference of incomplete data models 
+
+
+### Problem 3. States decoding
+
+Reconstruction of the hidden states.
+
+--
+
+.care[Solution 1:] easy-peasy
+
+`$$\hat{Z}_k = \mathtt{argmax}_{s\in \mathcal{S}} \mathbb{P}_{\hat\theta}(Z_k =s \vert Y_{0:n} )$$`  
+Recall : `\(\alpha_k(j) := \mathbb{P}_{\theta}(Y_{0:k}, Z_k = s_j )\)`
+
+Let's define `\(\beta_k(j) := \mathbb{P}_{\theta}(Y_{k:n}\vert Z_k = s_j ),\)`
+
+`\(\beta_k\)` verifies a recursive equation
+
+`\(\beta_k(j) := \sum_{s\in\mathcal{S}} \Pi(j,s) g_{\theta_j}(y_{k+1}) \beta_{k+1}(s).\)`
+
+--
+`$$\mathcal{P}_\theta(Z_k = j \vert Y_{0:n}) = \frac{\alpha_k(j) \beta_k(j) }{\mathbb{P}_\theta(Y_{0:n})}$$` 
+
+---
+
+
+&lt;img src="../resources/figs/seal.jpg" width="60%" style="display: block; margin: auto;" /&gt;
+
+
+---
+template: stat
+
+## Statistical inference of incomplete data models 
+
+
+### Problem 3. States decoding
+
+Reconstruction of the hidden states.
+
+--
+
+.care[Solution 1:] Best optimal pathway
+
+`$$\hat{Z}_{0:n} = \mathtt{argmax}_{s_0, \ldots, s_n\in \mathcal{S}^{n+1}} \mathbb{P}_{\hat\theta}(Z_0=s_0, \ldots, Z_n=s_n \vert Y_{0:n} )$$`  
+--
+
+Viterbi algorithm 
+
+---
+# Practical
+
+## Back to Red Footed booby 
+
+&lt;img src="../resources/figs/sula_sula.jpg" width="20%" height="50%" style="display: block; margin: auto;" /&gt;
+
+
+
+```r
+#remotes::install_github('marieetienne/coursesdata')
+data(fou, package='coursesdata')
+```
+
+```
+## Warning in data(fou, package = "coursesdata"): data set 'fou' not found
+```
+
+
 
 ---
 
@@ -149,6 +530,14 @@ Elwen, S., M. A. Meÿer, P. B. Best, et al. (2006). "Range and movements
 of female Heaviside's dolphins (Cephalorhynchus heavisidii), as
 determined by satellite-linked telemetry". In: _Journal of Mammalogy_
 87.5, pp. 866-877.
+
+Patterson, T. A., M. Basson, M. V. Bravington, et al. (2009).
+"Classifying movement behaviour in relation to environmental conditions
+using hidden Markov models". In: _Journal of Animal Ecology_ 78.6, pp.
+1113-1123. DOI:
+[https://doi.org/10.1111/j.1365-2656.2009.01583.x](https://doi.org/https%3A%2F%2Fdoi.org%2F10.1111%2Fj.1365-2656.2009.01583.x).
+URL:
+[https://besjournals.onlinelibrary.wiley.com/doi/abs/10.1111/j.1365-2656.2009.01583.x](https://besjournals.onlinelibrary.wiley.com/doi/abs/10.1111/j.1365-2656.2009.01583.x).
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
