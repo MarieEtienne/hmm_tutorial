@@ -2,7 +2,7 @@
 title: "Hidden Markov models "
 subtitle: "for movement ecology"
 author: Marie-Pierre Etienne
-institute: "https://marieetienne.github.io/hmm_tutorial/"
+institute: "https://github.com/MarieEtienne/hmm_tutorial"
 date: "Mars 2021"
 csl: "../resources/apa-no-doi-no-issue.csl"
 output:
