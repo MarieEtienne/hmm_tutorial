@@ -1,0 +1,514 @@
+---
+title: "Fous Sophie"
+author: "Marie-Pierre Etienne, Pierre Gloaguen"
+date: "6/29/2020"
+output:
+  pdf_document: 
+    dev: cairo_pdf
+    keep_tex: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, cache = FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = FALSE, cache = TRUE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(ggpubr)
+library(lubridate)
+library(nlme)
+source(file = 'utils_HMM.R')
+source(file = 'ICL.R')
+library(moveHMM)
+library(depmixS4)
+library(circular)
+```
+
+```{r ggplot_theme_set, cache = FALSE}
+options(ggplot2.continuous.colour="viridis")
+scale_colour_discrete <- function(...) {
+  scale_colour_manual(..., values=c(wesanderson::wes_palette("Darjeeling1"), "darkgreen"))
+}
+scale_fill_discrete <- function(...) {
+  scale_fill_manual(..., values=c(wesanderson::wes_palette("Darjeeling1"), "darkgreen"))
+}
+theme_set(theme_bw() +
+            theme(
+              panel.border = element_rect(colour = "black",
+                                          fill = rgb(0, 0, 0, 0)),
+              panel.grid = element_line(linetype = 2),
+              plot.background = element_rect(fill = "white"),# bg around panel
+              legend.background = element_blank(),
+              text = element_text(family = "LM Roman 10", size = 12, face = "bold"),
+              axis.title = element_text(size = rel(1.1)),
+              legend.text = element_text(size = rel(1)),
+              legend.title = element_text(size = rel(1.1)),
+              plot.subtitle = element_text(hjust = 0.5, size = rel(1)),
+              strip.background = element_rect(fill = "lightgoldenrod1"),
+              plot.title = element_text(face = "bold", size = rel(1.2), hjust = 0.5)))
+```
+
+## Présentations des données
+
+Nous nous intéressons à l'étude du comportement des Fous à pieds rouges (*Sula sula*). 
+
+Nos données consistent en trois trajectoires effectuées par 3 Fous de L'Ilha do Meion une île brésilienne faisant partie de l'archipel du Fernando de Noronha se situant dans l'Océan Atlantique.
+
+```{r read_data}
+data(fou, package = 'coursesdata')
+```
+
+
+# Lissage des données
+
+Les données sont ici acquises à haute fréquence (un point toutes les 10 secondes). Ainsi, même si les données sont entâchées de peu d'erreurs (il s'agit de GPS), la proximité temporelle des observations peut ajouter un aspect erratique à la trajectoire. 
+Cette erraticité sera d'autant plus visible dans les métriques du mouvement qui serviront à la détection des différentes activités.
+
+Afin de corriger ces erreurs, on pose un modèle de Markov caché linéaire Gaussien tel que discuté dans la section précédente. 
+
+L'état caché est cette fois la vraie postion qui est supposée suivre un processus gaussien bivarié tel que
+$Z_k = Z_{k-1} + \delta + \E_{k}.$ L'observation consiste en une version bruitée de cette vraie trajectoire.
+
+```{r smooth}
+fou %>% ggplot() + 
+  geom_path(aes(y=Northing, x =Easting, col = ID), linetype = 3) +
+  geom_path(aes(y=Northing_smoothed, x =Easting_smoothed, col = ID), linetype = 1) 
+```
+
+
+```{r smooth-zoom}
+fou %>% ggplot() + 
+  geom_path(aes(y=Northing/10000, x =Easting/10000, col = ID), linetype = 3) +
+  geom_path(aes(y=Northing_smoothed/10000, x =Easting_smoothed/10000, col = ID), linetype = 1) +
+  xlim(c(59.6, 60.25)) + ylim(c(950.5,951.5))
+```
+
+
+
+# Ajustement d'un modèle à trois états
+
+Dans un premier temps, nous ajustons un modèle à trois états. 
+
+
+## Définition des observations
+
+Nous cherchons à identifier différents types de comportements au sein de la trajectoire. Par exemple, on cherche à distinguer dans la trajectoire des comportements de recherche de nourriture, associés à des changements de direction rapides, ou au contraire des comportements de déplacement dirigés vers un but, associé à une trajectoire plus rectiligne. 
+
+
+Il semble donc que les métriques pertinentes soient essentiellement ici, le changement d'angle ('turning angle') et la longueur des pas. En effet, étant donnée la connaissance biologique du déplacement de ces oiseaux, il semble, a priori,  que ces métriques soient le plus à même de dissocier les comportements.
+
+Dans cet exemple, nous décidons d'ajuster deux modèles, qui diffère par les métriques de mouvement considérées (et donc les lois d'émission associées). Les deux couples de métriques considérées sont les suivantes:
+
+* Métrique de longueur de pas et de changement d'angle, classiquement choisie depuis @morales2004extracting. 
+Les lois d'émissions considérées sont une distribution gamma pour la longueur de pas et une distribution circulaire, la loi de von Mises, pour les angles. Ce modèle sera identifié par le terme *Longueur/Angle* sur les figures.
+
+* Métrique de changements de vitesse bivariée @gurarie2009novel. 
+Les lois d'émissions considérées sont deux lois normales indépendantes. Ce modèle sera identifié par le terme *Vitesse bivariée* sur les figures.
+
+## Définition du point de départ de l'algorithme
+
+Dans ces modèles sans covariables (et où l'on n'estimera pas la loi initiale), chaque modèle est composé de 18 paramètres (12 paramètres de lois d'émissions et 6 paramètres de matrice de transition). Toute optimisation itérative dans un tel espace peut s'avérer sensible au point de départ choisi.
+Dans les deux cas, trouver un point de départ intelligent pour l'algorithme est un point clé. 
+Une idée assez générique est de faire un classification des $k$-moyennes (sur les métriques considérées). 
+Cette classification très rapide permettra d'identifier des paramètres plausibles pour les différents régimes.
+Cette technique ne dispense évidemment pas de devoir s'assurer que le résultat de l'algorithme obtenu est non sensible à ce point de départ. 
+
+
+```{r metrique}
+knitr::include_graphics('movement_graph.pdf' )
+```
+
+On va s'aider du package 
+
+```{r moveHMM_data}
+moveHMM_data <- fou %>% 
+  as.data.frame() %>%
+  rowid_to_column( var = "id_point") %>% 
+  mutate(alt_scaled = scale(alt), dist_scaled = scale(dist.nid), dist_scaled_sq = sqrt(dist_scaled)) %>% 
+  moveHMM::prepData(type = "UTM", coordNames = c("Easting_smoothed",
+                                                "Northing_smoothed"))
+```
+
+
+
+
+
+```{r depmix_data_n_times}
+# Creation de v_p/v_r
+depmix_data <- moveHMM_data %>% 
+  as_tibble() %>% 
+  mutate(v_p = step * cos(angle), v_r = step * sin(angle)) %>%
+  replace_na(list(angle = 0, v_r = 0)) %>% 
+  mutate(v_p = ifelse(is.na(v_p), step, v_p))
+# Distinguishing animals
+n_times <- depmix_data %>% 
+  group_by(ID) %>% 
+  summarise(n_times = n()) %>% 
+  pull(n_times)
+```
+
+
+
+
+```{r initial_model}
+library(depmixS4)
+source("utils_HMM.R")
+n_states <- 3
+set.seed(123)
+initial_model <- depmixS4::depmix(list(v_p ~ 1, v_r ~ 1), data = depmix_data, 
+                                                nstates = n_states,
+                         family = list(gaussian(), gaussian()), ntimes = n_times,
+                         respstart = get_init_depmix(depmix_data, nbStates = n_states),
+                         initdata = rep(1/n_states,n_states),
+                         transition = ~ 1)
+depmix_fit <- depmixS4::fit(initial_model,
+                            verbose = FALSE, 
+                            emcontrol = em.control(crit = "relative"))
+```
+
+
+```{r depmix_results}
+rank_vector_depmix <-  posterior(depmix_fit) %>% 
+  dplyr::select(state) %>% 
+  mutate(step = depmix_data$step) %>% 
+  group_by(state) %>% 
+  summarise(mean_step = mean(step, na.rm = T)) %>% 
+  arrange(state) %>% 
+  pull(mean_step) %>% 
+  rank()
+depmix_states <- posterior(depmix_fit) %>% 
+  rename(Predicted_state = state) %>% # So that it do not start with s
+  rename_at(.vars = vars(starts_with("S")), 
+            function(name) paste0("State",rank_vector_depmix[str_extract(name, "[[::0-9::]]") %>%
+                                                               as.numeric()])) %>% 
+  mutate(Predicted_state = rank_vector_depmix[Predicted_state]  %>% 
+           factor(levels = 1:n_states)) %>% 
+  bind_cols(depmix_data, .) %>% 
+  # rename(Easting = x, Northing = y) %>% 
+  as_tibble() %>% 
+  mutate(metric = "Vitesse bivariée")
+```
+
+```{r moveHMM_fit}
+par_init_moveHMM <- get_init_moveHMM(dta = moveHMM_data, nbStates = n_states)
+set.seed(123)
+moveHMM_fit <- moveHMM::fitHMM(data = moveHMM_data, nbStates = n_states, 
+                              stepPar0 = par_init_moveHMM$stepPar0,
+                              anglePar0 = par_init_moveHMM$anglePar0,
+                              formula = ~ 1) 
+```
+
+```{r moveHMM_results}
+rank_vector_moveHMM <-  tibble(state = moveHMM::viterbi(moveHMM_fit)) %>% 
+  mutate(step = depmix_data$step) %>% 
+  group_by(state) %>% 
+  summarise(mean_step = mean(step, na.rm = T)) %>% 
+  arrange(state) %>% 
+  pull(mean_step) %>% 
+  rank()
+moveHMM_states <- moveHMM::stateProbs(moveHMM_fit) %>% 
+  as_tibble() %>% 
+  rename_at(.vars = vars(starts_with("V")), 
+            function(name) paste0("State",rank_vector_moveHMM[str_extract(name, "[[::0-9::]]") %>%
+                                                               as.numeric()])) %>%
+  bind_cols(depmix_data, .) %>% 
+  mutate(Predicted_state = rank_vector_moveHMM[moveHMM::viterbi(moveHMM_fit)] %>% 
+           factor(levels = 1:n_states)) %>% 
+  mutate(metric = "Longueur/Angle")
+ICL(moveHMM_fit)
+```
+
+```{r estimated_states}
+estimated_states <- moveHMM_states %>% 
+  bind_rows(depmix_states) 
+```
+
+## Caractérisation des états cachés
+
+Dans les deux packages utilisés, les paramètres du HMM sont estimés par maximum de vraisemblance, et la séquence des états cachés la plus probable est retracée par algorithme de Viterbi.
+
+Dans ce modèle, les états cachés caractérisent la distribution de vitesses et de changement d'angle. En termes de trajectoires, cela implique qu'un état caché caractérise un segment entre deux positions (ici séparées de 10 secondes).
+La représentation des états sur la trajectoire se fera donc sur ces segments. 
+Dans ce contexte de classification non supervisée, les labels attribués aux états cachés (interprétés comme des comportements) sont arbitraires, et chaque état devra être caractérisé *a posteriori*. 
+Pour faciliter l'interprétation, nous avons différencier les 3 états par la vitesse moyenne observée dans chacun des états, l'état 1 étant associé à une vitesse lente, l'état 3 étant associé à une vitesse rapide.
+
+Pour les deux modèles ajustés, on commence par représenter sur les trajectoires les comportements retrouvés par l'inférence :
+
+```{r plot_etat_predit}
+estimated_states %>% 
+  group_by(ID, metric) %>%
+  mutate(Next_East = lead(x), Next_North = lead(y)) %>% 
+  ggplot(aes(x = x, y = y)) +
+  # geom_point(aes(y = Value, color = Predicted_state)) + 
+  geom_segment(aes(xend = Next_East, yend = Next_North,
+                   color = Predicted_state, 
+                   group = interaction(metric, ID, linetype = ID))) +
+  # geom_point(aes(y = Value, color = Predicted_state)) +
+  facet_wrap( ~ metric) +
+  labs(color = "Etat prédit") +
+  theme(axis.title = element_blank(), axis.text = element_blank(), 
+        axis.ticks = element_blank())
+```
+
+On peut immédiatement remarqué que l'ajustement des deux modèles abouti à des colorations différentes des trajectoires. 
+
+- La métrique *Longueur/Angle* abouti à trois états très visblement présent, avev notamment un état "lent" caractérisant les phases erratiques de la trajectoire. L'état intermédiaire l'état 2) caractérise les débuts de trajectoires à vitesse moyenne, et moyennement erratique, tandis que le troisième état semble caractériser les phases rapides et dirigées.
+- Pour la métrique *Vitesse bivariée*, le troisième état semble similaire, mais la distinction entre les deux premiers est sensiblement différente. Le premier état semble être un état de dérive de l'oiseau, associé à une vitesse très faible et très peu variable. 
+L'état intermédiaire semble caractériser tous les déplacements qui ne sont pas du repos proprement dit, il s'agit d'un état à forte variance dans les vitesses.
+
+Cette première interprétation peut être étoffée par l'analyse des distributions des longueur de pas et des angles par état \footnote{Le modèle "Vitesse bivariée" peut tout de même être interprété *a posteriori* par le prisme classique longueur de pas/angle, c'est ce qui est fait ici. Dans cet exemple, comme la majorité des angles sont proches de 0, la composante $V_p$ de cette métrique est en fait très corrélée à la longueur de pas.}.
+
+```{r plot_distribution_steps}
+plot_distrib_steps <- estimated_states %>% 
+  ggplot(aes(x = step)) + 
+  geom_density(aes(fill = Predicted_state), alpha = 0.5) +
+  facet_wrap(~metric) +
+  labs(y = "Densité estimée", x = "", title = "Longueurs de pas",
+       fill = "Etat prédit")
+```
+
+```{r plot_distribution_angles}
+plot_distrib_angles <-  estimated_states %>%  
+  ggplot(aes(x = angle * 180 / pi)) +
+    coord_polar(theta = "x", start = pi/2 , direction = -1, clip = "off") +
+  facet_wrap(~ metric) +
+  geom_histogram(aes(fill = Predicted_state, y = ..density..),
+                 breaks = seq(-180, 180, by = 15), color = "black",
+                  alpha = 0.5,
+                  position = "identity") +
+  scale_x_continuous(breaks = seq(-180, 180, by = 15), expand = c(0, 0)) +
+  theme(axis.ticks = element_blank(), axis.title = element_blank(),
+        axis.text.y = element_blank()) +
+  labs(fill = "Etat prédit", title = "Angles")
+```
+
+```{r plot_distributions}
+gridExtra::grid.arrange(plot_distrib_steps, plot_distrib_angles, nrow = 2)
+```
+
+On peut immédiatement voir que la distinction entre états ne se fait (dans aucun des deux modèles) sur la distribution des changements d'angles, mais bien plus sur la distribution des longueur de pas.
+
+On remarque ici que pour la métrique *Longueur/Angle*, l'état lent couvre les déplacements allant de 0 à 50 mètres, tandis que pour la métrique *Vitesse bivariée*, l'état lent couvre les très petits déplacements observés (de l'ordre de 5 mètres). L'état 2 est ne couvre ainsi pas les mêmes vitesses, il va de 60 à 120 mètres pour la première métrique, tandis qu'il s'étale de 0à 100 pour la deuxième, couvrant les déplacements de faibles longueur (de l'ordre de la vingtaine de mètres). On remarque que l'état rapide est similaire pour les deux métriques.
+
+Cette distinction peut encore se voir dans la table des contingences des états selon les métriques.
+
+```{r contingence_etats}
+get_contingency <- function(ID_){
+  state_sl <- filter(moveHMM_states, ID %in% ID_) %>% 
+    pull(Predicted_state)
+  state_bv <- filter(depmix_states, ID %in% ID_) %>% 
+    pull(Predicted_state)
+  contingency_table <- table(state_sl, state_bv) %>%
+    prop.table(margin = 2) %>% 
+    as_tibble() %>% 
+    # mutate(ID = ID_) %>% 
+    rename(Freq = n)
+}
+contingency_tibble <- estimated_states %>% 
+    pull(ID) %>% 
+    unique() %>% 
+    get_contingency()
+contingency_tibble %>% 
+    mutate(state_bv = factor(state_bv, levels = paste(3:1))) %>% 
+    ggplot(aes(state_sl, state_bv)) + 
+    geom_tile(aes(fill = Freq)) +
+    # facet_wrap(~ID) +
+    geom_text(aes(label = round(Freq, 2)), color = "red") +
+    scale_fill_viridis_c(name = "Proportion") + 
+    labs(x = "Longueur/Angle", y = "Vitesse bivariée", title = "Contingence des états") +
+    scale_x_discrete(expand = c(0, 0)) + 
+    scale_y_discrete(expand = c(0, 0))
+```
+
+On voit encore ici que l'état 1 de la métrique *Vitesse bivariée* est parfaitement inclus dans l'état 1 dans la métrique *Longueur/Angle*, de même que l'état 3. La différence est dans l'état 2 de cette métrique, qui correspond à un mélange de l'état 1 et de l'état 2 de la métrique *Longueur/angle*.
+
+Il convient de remarquer que ces différences ne sont pas surprenantes du fait qu'on s'intéresse à deux métriques différentes. Nous avons choisi ici d'illustrer cette différence, mais le lecteur pourra vérifier que pour un modèle à 4 états, les états trouvés sont très similaires dans chaque état.
+
+Ici, la caractérisation des états, et le choix entre le "meilleur" modèle relève plus de l'interprétation, en lien avec la biologie de l'espèce considérée. Comme souvent, l'approche non supervisée est une approche exploratoire qu'on ne peut déconnecter du contexte écologique.
+
+## Incertitude des états
+
+Un des intérêts de l'approche probabiliste de la classification supervisée est de pouvoir quantifier l'incertitude de classification. Ici, on peut regarder l'évolution temporelle de la probabilité d'être dans l'état 1 ou l'état 2. Le graphique suivant montre cette évolution pour un des trois fous:
+
+```{r probabilite_etat_aposteriori}
+estimated_states %>% 
+  filter(ID == "BR1705") %>% 
+  dplyr::select(time_step, metric, State1, State2) %>%
+  gather(-time_step, -metric, key = "Etat", value = "Proba") %>% 
+  mutate(Etat = str_extract(Etat, "[[::0-9::]]")) %>% 
+  ggplot(aes(x = time_step, y = Proba)) +
+  geom_line(aes(color = Etat), alpha = 0.5, size = 1.2) +
+  labs(color = "Etat", y = "Probabilité", x = "Pas de temps") +
+  facet_wrap(~metric)
+```
+
+On voit qu'ici l'incertitude d'attribution des états est très faible, la séparation des distributions dans chaque état étant bien nette.
+
+## Ajout de la covariable "distance au nid"
+
+Dans un second temps, on ajuste un modèle avec covariables
+
+```{r depmix_covariates}
+mat_from_1 <- c(10, 0.5, 0.5,
+                0, 1, 1
+                ,0, 1, 1
+                )
+mat_from_2 <- c(10, 0.5, 0.001,
+                0, 1, 0.001
+                ,0, 1, 0.001
+                )
+mat_from_3 <- c(10, 0.001, 0.5,
+                0, 0.001, 1
+               ,0, 0.001, 1
+                )
+trans_inits <-  c(mat_from_1, mat_from_2, mat_from_3)
+fixed_parameters <- c(rep(TRUE, 3), # Distribution initiale
+                      trans_inits %in% c(0, 10),
+                      rep(FALSE, 12))
+initial_model_covariates <- depmixS4::depmix(list(v_p ~ 1, v_r ~ 1), data = depmix_data, nstates = 3,
+                         family = list(gaussian(), gaussian()), ntimes = n_times,
+                         respstart = getpars(depmix_fit)[13:24],
+                         trstart = trans_inits,
+                         instart = rep(1/3, 3),
+                         transition = ~ dist_scaled + dist_scaled_sq)
+
+
+depmix_fit_covariates <- depmixS4::fit(initial_model_covariates, verbose = FALSE,
+                            fixed = fixed_parameters,
+                            emcontrol = em.control(crit = "absolute"))
+summary(depmix_fit_covariates, which = "transition")
+```
+
+```{r transition_covariates}
+load("depmix_fit_covariates.RData")
+betas <- purrr::map(depmix_fit_covariates@transition,
+             function(x) x@parameters$coefficients)
+get_probs <- function(beta_){
+  x_ <- seq(-1.75, 1.75, length.out = 1001)
+  my_X <- tibble(Int = rep(1, 1001), 
+                 x = x_,
+                 x2 = x^2) %>% 
+    as.matrix()
+  x_beta <- my_X %*% beta_
+  Pr1 <- apply(x_beta, 1, function(x) 1 / (1 + sum(exp(x[2:3]))))
+  Pr23 <- exp(x_beta[, 2:3]) * Pr1
+  cbind(Pr1, Pr23) %>% 
+    as.data.frame() %>% 
+    mutate(d = x_) %>% 
+    tidyr::pivot_longer(cols = -d,
+                        names_to = "to",
+                        values_to = "Prob") %>% 
+    mutate(to = factor(to, 
+                       levels = c("Pr1", "St2", "St3"),
+                       labels = paste0(1:3)))
+}
+map_dfr(betas, get_probs, .id = "from") %>% 
+  ggplot(aes(x = d, y = Prob)) +
+  facet_grid(from ~ to, switch = "y") +
+  geom_line() +
+  labs(x = "Distance au nid", y = "Probabilité de transition")
+```
+
+
+```{r}
+get_transtion_probability_prediction <- function(coeff1, coeff2, transition_name,
+                             metric,
+                             original_mean = mean_dw,
+                             original_sd = sd_dw,
+                             alpha = 0.05){
+  # REMARQUE
+  # Cette fonction est faite "à la main" et n'est pas très générique.
+  # Notamment, les indices pour les matrices de covariances ne marchent
+  # que pour ces modèles. De plus les objets fittés sont nommés comme
+  # dans ce code.
+  if(metric == "Vitesse bivariée"){
+    beta_cov_matrix <- vcov(depmix_fit)$vcov[1:4, 1:4]
+  }
+  if(metric == "Longueur/Angle"){
+    beta_cov_matrix <- ginv(moveHMM_fit$mod$hessian)[11:14, 11:14]
+  }
+  if(transition_name == "1 -> 2"){
+    cov_mat <- beta_cov_matrix[1:2, 1:2]
+  }
+  if(transition_name == "2 -> 1"){
+    cov_mat <- beta_cov_matrix[3:4, 3:4]
+  }
+  xs <- seq(-1, 3.8, length.out = 401) # Gamme de valeurs des données
+  linked_response <- coeff1 + coeff2 * xs
+  design_mat <- matrix(c(rep(1, length(xs)), xs), ncol = 2)
+  linked_prediction_variances <- sapply(xs, function(x){
+    t(c(1, x)) %*% cov_mat %*% c(1, x)
+  })
+  response <- 1 / (1 + exp(-linked_response))
+  # Application de la delta methode
+  response_variances <- exp(-2 * linked_response) / (1 + exp(-linked_response))^4 *
+    linked_prediction_variances
+  qtl <- qnorm(1 - alpha * 0.5) # quantile au niveau 1 - alpha / 2
+  tibble(dist_water = xs * original_sd + original_mean,
+         proba_est = response,
+         CI_low = response - qtl * sqrt(response_variances),
+         CI_sup = response + qtl * sqrt(response_variances),
+         metric = metric,
+         transition = transition_name)
+}
+```
+
+```{r}
+n_states <- 6
+set.seed(123)
+initial_model_J6 <- depmixS4::depmix(list(v_p ~ 1, v_r ~ 1), data = depmix_data, 
+                                                nstates = n_states,
+                         family = list(gaussian(), gaussian()), ntimes = n_times,
+                         respstart = get_init_depmix(depmix_data, nbStates = n_states),
+                         initdata = rep(1/n_states,n_states),
+                         transition = ~ 1)
+depmix_fit_J6 <- depmixS4::fit(initial_model_J6,
+                            verbose = FALSE, 
+                            emcontrol = em.control(crit = "relative"))
+depmix_fit_J6
+rank_vector_depmix_J6 <-  posterior(depmix_fit_J6) %>% 
+  dplyr::select(state) %>% 
+  mutate(step = depmix_data$step) %>% 
+  group_by(state) %>% 
+  summarise(mean_step = mean(step, na.rm = T)) %>% 
+  arrange(state) %>% 
+  pull(mean_step) %>% 
+  rank()
+depmix_states_J6 <- posterior(depmix_fit_J6) %>% 
+  rename(Predicted_state = state) %>% # So that it do not start with s
+  rename_at(.vars = vars(starts_with("S")), 
+            function(name) paste0("State",rank_vector_depmix_J6[str_extract(name, "[[::0-9::]]") %>%
+                                                               as.numeric()])) %>% 
+  mutate(Predicted_state = rank_vector_depmix_J6[Predicted_state]  %>% 
+           factor(levels = 1:n_states)) %>% 
+  bind_cols(depmix_data, .) %>% 
+  # rename(Easting = x, Northing = y) %>% 
+  as_tibble() %>% 
+  mutate(metric = "Vitesse bivariée")
+
+
+p1 <- depmix_states_J6 %>% 
+  group_by(ID, metric) %>%
+  mutate(Next_East = lead(x), Next_North = lead(y)) %>% 
+  ggplot(aes(x = x, y = y)) +
+  # geom_point(aes(y = Value, color = Predicted_state)) + 
+  geom_segment(aes(xend = Next_East, yend = Next_North,
+                   color = Predicted_state, 
+                   group = interaction(metric, ID, linetype = ID))) +
+  # geom_point(aes(y = Value, color = Predicted_state)) +
+  labs(color = "Etat prédit", 
+       title = "Trajectoires") +
+  theme(axis.title = element_blank(), axis.text = element_blank(), 
+        axis.ticks = element_blank())
+
+p2 <- depmix_states_J6 %>% 
+  ggplot(aes(x = step)) + 
+  geom_density(aes(fill = Predicted_state), alpha = 0.5) +
+  labs(y = "Densité estimée", x = "", title = "Longueurs de pas",
+       fill = "Etat prédit") +
+  scale_fill_discrete()
+```
+
+```{r plot_6states}
+gridExtra::grid.arrange(p1, p2, nrow = 2)
+```

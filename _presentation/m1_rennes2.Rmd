@@ -35,22 +35,161 @@ knitr::opts_chunk$set(out.width = '40%', fig.align = 'center', cache = TRUE)
 myBib <- ReadBib('bibliography.bib', check = FALSE)
 with_sol <- TRUE ## in order to control the output
 with_course <- TRUE
+## before pres
+knitr::read_chunk("../resources/R/SimulationPath.R")
+library(tidyverse)
 ```
 
 
 
 name: intro
 # Introduction
+---
+template: intro
+## Movement Ecology
+
+.care[Definition: ] The study of the mechanisms responsible for the movement of individuals.
+
+--
+### Identifying patterns in trajectories for
+* smoothing trajectories,
+* inferring behaviours from trajectories,
+* trajectories clustering,
+* (understanding the use of  space ).
+
+
+
+---
+count: false
+template: intro
+## Movement Ecology
+
+### Smoothing trajectories
+
+
+```{r dolphin, echo = FALSE, fig.align = 'center', fig.dim=c(12,8), out.width = '50%'}
+library(cowplot)
+library(ggplot2)
+
+p1 <- ggdraw() + draw_image(file.path(course_img_dir, "dolphin.png"))+ theme(plot.margin = unit(c(0, 0, 0, 0), "cm"))
+p2 <- ggdraw() + draw_image(file.path(course_img_dir, "Heaviside-Delphin.jpg"))+ theme(plot.margin = unit(c(0, 0, 0, 0), "cm"))
+
+plot_grid(p1, p2)
+```
+
+.center[Dolphin recorded positions, illustrations from  `r Citep(myBib, 'elwen2006range')`]
+
+.care[Goal: ] Given  noisy recorded positions, recovering most probable movement? 
+---
+count: false
+template: intro
+## Movement Ecology
 
 ---
 template: intro
-## Motivations
+## Movement ecology data
 
-### HMM General context
+### Inferring behaviors
 
-Description of biological problems which 
+
+```{r pathPractical1, include = FALSE, fig.show='hide', results='hide',  cache=FALSE}
+```
+
+
+```{r pathPractical2, echo = FALSE}
+```
+
+
+---
+template: intro
+## Movement ecology data
+
+### Inferring behaviors
+
+```{r pathPractical3, echo = FALSE}
+```
+
+
+.care[Goal:]  Identifying the diving events or ARS (Area-Restricted search).
+---
+count: false
+template: intro
+## Movement Ecology
+
+### Clustering trajectories
+
+
+```{r penguins, fig.align= 'center', echo = FALSE}
+ knitr::include_graphics(file.path(course_img_dir, "MapAllTraj2.png"))
+```
+
+.center[African penguin data courtesy of Antje Steinfurth]
+
+.care[Goal:]  Clustering individuals according to their feeding strategy.
+
+
+---
+template: intro
+## Recording movement - tagging animals
+
+
+```{r tagging, echo = FALSE, out.width = '50%', fig.dim=c(16,8)}
+gps1 <- ggdraw() + draw_image(file.path(course_img_dir, "BertrandGPS.png"))
+gps2 <-  ggdraw() + draw_image(file.path(course_img_dir, "BetrandFou.png"))
+plot_grid(gps1, gps2,  nrow = 1)
+```
+
+.center[GPS tag on a Peruvian booby. (Sophie Bertrand)]
+
+---
+template: intro
+## Movement ecology data
+
+  A trajectory is, at least, a set of recorded location (relocations),
+
+
+
+time | long | lat
+--|--|--
+ $t_0$ | $x_0$ | $y_0$
+... | ... | ...
+ $t_n$ | $x_n$ | $y_n$
+
+--
+
+.care[Precision of the relocations] Highly dependant of the technology
+
+* GLS (very unprecise, for fish and marine animals)
+* Argos (unprecise, data are transmitted to satellite)
+--
+
+* *GPS* (precise, data are stored)
+
+
+
+---
+template: intro
+## Movement ecology data
+
+### Our case study 
+
+```{r sula, fig.align= 'center', echo = FALSE, out.height = '50%', out.width = '20%'}
+ knitr::include_graphics(file.path(course_img_dir, "sula_sula.jpg"))
+```
+
+
+
+---
+name: model
+# Hidden Markov Model
+
+---
+template: model
+## General context
+
+Modelling  (biological) problems which 
 * vary in time,
-* present complex dependance,
+* present complex dependence,
 * are partially observed
 
 --
@@ -63,73 +202,370 @@ Goal
 
 
 ---
-template: intro
-## Motivations
+template: model
 
-### Ecological context
+## Markov model 
 
-* Understanding space use,
-* Cheap GPS for recording positions, 
-* Movement patterns differ according to internal states.
+The sequence $(Z_0,\ldots,Z_n)$ taking values in a state space $\mathcal{S}$ is a Markov chain if it verifies
+
+$$\mathcal{L}_{Z_k \vert Z_{0:k-1}} = \mathcal{L}_{Z_k \vert Z_{k-1}},$$
+where $Z_{0:k}$ stands for the sequence $Z_0, \ldots, Z_k$.
+
+If $\mathcal{L}_{Z_k \vert Z_{k-1}}$ does not depend on $k$, the chain is said *stationary*.
 
 --
 
-Accounting for 
-
-* potential noise in recorded positions,
-* Shift in internal states.
-
-
----
-template: intro 
-## HMM to address two different problems
-
-### Reconstructing the *true* movement: denoising
-From  noisy recorded positions, what is the most probable movement ? 
-
-Dolphin recorded positions, illustrations from  `r Citep(myBib, 'elwen2006range')`
-
-```{r dolphin, echo = FALSE, fig.align = 'center', fig.dim=c(12,8), out.width = '50%'}
-library(cowplot)
-library(ggplot2)
-
-p1 <- ggdraw() + draw_image(file.path(course_img_dir, "dolphin.png"))+ theme(plot.margin = unit(c(0, 0, 0, 0), "cm"))
-p2 <- ggdraw() + draw_image(file.path(course_img_dir, "Heaviside-Delphin.jpg"))+ theme(plot.margin = unit(c(0, 0, 0, 0), "cm"))
-
-plot_grid(p1, p2)
-
-```
-
----
-template: intro 
-## HMM to address two different problems
-
-### Reconstructing the internal states
-
-```{r read_sim_chunk}
-  knitr::read_chunk("../resources/R/SimulationPath.R")
-```
-
-```{r pathPractical1, echo=FALSE, fig.show='hide', results='hide', cache=FALSE}
-```
-
-```{r pathPractical2, echo=FALSE, fig.show='hide', results='hide', cache=FALSE}
-```
-
-```{r pathPractical3, echo=FALSE, fig.show='hide', results='hide', cache=FALSE}
-```
-
-* **Inferring internal states**: Detect switch in movement pattern to reconstruct, the sequence of internal states 
-
+A stationary Markov chain is described by 
+* its initial distribution $\nu$ (a probability distribution on  $\mathcal{S}$),
+* its transition kernel $\mathbb{P}i(,)$
 
 
 ---
-template: intro 
-## Illustration 
+template: model
 
-### Reconstructing the `true` movement
+## Stationary Markov model example
+
+If the state space is finite with $L$ elements, $\mathcal{S} = \left\lbrace s_1, s_2, s_L\right\rbrace$, then
+
+* $\nu(k) =\mathbb{P}(Z_0=k)$
+* $\mathbb{P}i(i,j)=\mathbb{P}(X_k=j\vert X_{k-1}=i)$ the transition matrix
+
+--
+
+Consequences
+
+* Probabilité d'observer une séquence
+  $$\mathbb{P}(Z_0= z_0, Z_1=z_1, \ldots, Z_n = z_n) = \nu(z_0)\mathbb{P}i(z_0, z_1)\ldots \mathbb{P}i(z_{n-1}, z_n).$$
+
+* Probabilité d'être dans l'état $k$ à l'instant $n$
+$$\mathbb{P}( Z_k = z_k) = \nu\mathbb{P}i^{k} (z_k).$$
+
+
+--
+Example : 
+$$\mathcal{S}=\left\lbrace A, B, C\right\rbrace,$$
+$$\nu =\left (0.1, 0.6, 0.3\right)^T$$
+
+$$\mathbb{P}i = \begin{pmatrix} 
+0.9 & 0.1 & 0 \\
+0.1 & 0.7 & 0.2 \\
+0.1 & 0.1 & 0.8 \\
+\end{pmatrix}$$
+
+---
+template: model
+
+## A two layers model
+
+* *Hidden layer* A sequence $Z_{0:n}$ models the sequence of activities and is assumed to follow a Markov chain.
+
+* *Observation layer* $Y_{0:n}$ is defined conditionnally on $Z_{0:n}$
+$$Y_k \vert Z_k=i \sim g_{\gamma_i}(.)$$
+
+
+The full model is defined by $\theta=(\nu,\mathbb{P}i,\gamma).$
+--
+
+A simple example:
+
+* The hidden layer is given by $(\mathcal{S},\nu,\mathbb{P}i)$
+
+* The observation layer
+
+$$Y_k \vert Z_k = x\sim \mathcal{N}(\mu_x, \sigma^2_x), \quad x=A,B,C.$$
+---
+template: model
+
+## A two layers model
+
+### Illustration
+
+
+```{r example_hmm}
+nu    <- c(0.1, 0.6, 0.3)
+Pi_mat  <- matrix( c(0.9, 0.1, 0, 0.1, 0.7, 0.2, 0.1, 0.1, 0.8), byrow = TRUE, ncol=3)
+mu    <- c(10, 4, -2)
+sigma <- c(2, 3 , 1)
+```
+
+---
+
+
+
+```{r example_hidden, echo = FALSE, eval = FALSE}
+set.seed(1234)
+N <- 100
+Z <- rep(NA, N); Y <- rep(NA, N) 
+Z[1] <- sample(1:3, size = 1, prob = nu)
+for(i in 2:N){ Z[i] <- sample(1:3, size = 1, 
+                              prob = Pi_mat[Z[i-1], ])}
+dta <- tibble(hidden=Z) %>% mutate( indice = row_number())
+dta %>% ggplot() + geom_point(aes(x=indice, y = hidden))
+```
+
+```{r example_hidden, eval = TRUE, include = FALSE}
+```
+
+
+```{r example_obs, echo = TRUE, eval = TRUE}
+for(i in 1:N){ Y[i] <- rnorm(1, mean = mu[Z[i]], sd = sigma[Z[i]])} #BREAK
+dta <- dta %>% mutate(obs = Y)
+dta %>% ggplot() + geom_point(aes(x=indice, y = obs)) #BREAK
+```
+
+---
+
+
+```{r example_obs_hid, echo = TRUE, eval = TRUE}
+dta %>% ggplot() + geom_point(aes(x=indice, y = obs, col = factor(hidden))) 
+```
+
+
+
+
+---
+template: model
+
+## A two layers model - Directed Acyclic Graph
 
  
+* *Hidden layer* A sequence $Z_{0:n}$ models the sequence of activities and is assumed to follow a Markov chain defined by  $(\mathcal{S},\nu,\mathbb{P}i)$
+
+
+* *Observation layer* $Y_{0:n}$ is defined conditionnally on $Z_{0:n}$
+$$Y_k \vert Z_k=i \sim g_{\theta_i}(.)$$
+
+
+
+
+```{r dag, fig.align= 'center', echo = FALSE, out.width='30%'}
+ knitr::include_graphics(file.path(course_img_dir, "Dag3.png"))
+```
+
+
+
+
+
+---
+template: model
+## Example of states decoding 
+
+
+```{r patterson, fig.align= 'center', echo = FALSE, out.height = '40%', out.width = '60%'}
+ knitr::include_graphics(file.path(course_img_dir, "jane_1583_f4.gif"))
+```
+
+
+.center[Southern bluefin tuna : resident or migrant ? Figure from `r Citet(myBib, 'patterson2009classifying')`]
+
+
+
+```{r pathPractical3, echo=FALSE, include = FALSE, fig.show='hide', results='hide', cache=FALSE}
+```
+
+
+
+---
+name: stat
+# Statistics of HMM
+
+---
+template: stat
+
+## Statistical inference of incomplete data models 
+
+
+### Problem 1. Compute likelihood 
+
+Integration over the hidden states is not tractable in practice
+
+$$\mathbb{P}_{\theta} (Y_{0:n}) =   \sum_{Z_{0:n}\in\mathcal{S}^{n+1}} \mathbb{P}_{\theta}(Y_{0:n}, Z_{0:n})$$
+Sum over $K^N$ terms
+
+--
+
+.care[ Solution :] Filtering approach. $\alpha_k(j) := \mathbb{P}_{\theta}(Y_{0:k}, Z_k = s_j )$
+
+$$\alpha_k(j) = \sum_{s\in\mathcal{S} }\mathbb{P}_{\theta}(Y_{0:k}, Z_{k-1}=s , Z_k = s_j ) = \sum_{s\in\mathcal{S} }\mathbb{P}_{\theta}(Y_k\vert Z_k=s_j)\mathbb{P}_{\theta}(Y_{0:k-1}, Z_k Z_{k-1}=s_i)$$
+$$\alpha_k(j) = \sum_{s\in\mathcal{S} } \alpha_{k-1}(i) g_{\theta_j}(y_k) \Pi(s,j).$$
+$$\mathbb{P}_{\theta} (Y_{0:n}) =\sum_{j\in \mathcal{S}} \alpha_{j}.$$
+
+$N*K^2$ operations. Filter
+
+
+---
+template: stat
+
+## Statistical inference of incomplete data models 
+
+
+### Problem 2. Maximising log likelihood
+
+* Numerical optimization
+* Expectation-Maximization algorithm: 
+
+$$\mathbb{E} \left( \log \mathbb{P}_{{ \gamma, \mathbb{P}i, \nu}}(Y_{0:n}, Z_{0:n})\vert Y_{0:n} \right)$$
+
+
+
+---
+template: stat
+
+## EM : Back to Bayes Formula 
+
+.pull-left[
+```{r, out.width = '30%', echo = FALSE}
+ knitr::include_graphics(file.path(course_img_dir, "ModHierarchical2.png"))
+```
+]
+
+.pull-right[
+Let  $\mathbb{P}_{\theta}(Y_{0:n},Z_{0:n})$ be the complete likelihood.\\
+Classical conditioning gives:
+
+$$\mathbb{P}_{\theta}(Y_{0:n},Z_{0:n})=\mathbb{P}_{\theta}(Y_{0:n} \vert Z_{0:n})\mathbb{P}_{\theta}(Z_{0:n})$$
+
+.care[ But ]
+$$\mathbb{P}_{\theta}(Y_{0:n},Z_{0:n})=\mathbb{P}_{\theta}(Z_{0:n}\vert Y_{0:n})\mathbb{P}_{\theta}(Y_{0:n})$$
+
+and 
+
+$$\ln \mathbb{P}_{\theta}(Y_{0:n})= \ln \mathbb{P}_{\theta}(Y_{0:n},Z_{0:n})- \ln \mathbb{P}_{\theta}(Z_{0:n}\vert Y_{0:n})$$
+
+]
+
+Integrating with respect to  $\mathbb{P}_{\theta'}(Z_{0:n}\vert Y_{0:n})$,
+
+$$\ln{\mathbb{P}_{\theta}(Y_{0:n})}  = \mathbb{E}_{\theta'}\left\lbrace\ln{\mathbb{P}_{\theta}(Z_{0:n},  Y_{0:n})} \vert Y_{0:n}\right\rbrace-\mathbb{E}_{\theta'}\left\lbrace \ln {\mathbb{P}_{\theta}(Z_{0:n}\vert Y_{0:n})} \vert Y_{0:n}\right\rbrace = Q(\theta,\theta')-H(\theta,\theta')$$
+
+
+
+---
+template: stat
+
+## Expection Maximization
+
+
+$$\ln{\mathbb{P}_{\theta}(Y_{0:n})}=Q(\theta,\theta')-H(\theta,\theta')$$
+
+--
+.care[Remark] 
+
+$$\ln{\mathbb{P}_{\theta}(Y_{0:n})} -\ln{\mathbb{P}_{\theta'}(Y_{0:n})}   =\left(  Q(\theta,\theta^{\prime})-Q(\theta^{\prime},\theta^{\prime})\right)+\left(  H(\theta^{\prime},\theta^{\prime})-H(\theta,\theta^{\prime})\right).$$
+--
+
+But $\theta\mapsto H(\theta,\theta^{\prime})$ achieves its maximum in  $\theta'$.
+
+Increasing Q, increases  $\ln{\mathbb{P}_{\theta}(Y_{0:n})}$.
+
+--
+
+**EM  algorithm:** iteration from  $\theta^{k}\longrightarrow \theta^{k+1}$
+
+1.  E step:   computing  $Q(\theta,\theta^{k})$ 
+2.  M step : finding $\theta^{k+1}=\mathtt{argmax}\, Q(\theta,\theta^{k})$
+
+
+
+---
+
+
+
+```{r lions, fig.align= 'center', echo = FALSE, out.width = '60%'}
+ knitr::include_graphics(file.path(course_img_dir, "lion.jpg"))
+```
+
+
+
+---
+template: stat
+
+## Expection Maximization : intuition on the simple example
+
+If $Z_{0:n}$ was known, we would estimate $\mu_i$ by
+
+$$\hat{\mu}_i = \frac{\sum_{k=0}^n Y_k 1_{Z_k = i}}{\sum_{k=0}^n 1_{Z_k = i} },$$
+With EM algo, at step $\ell$
+
+
+$$\hat{\mu}^{\ell+1}_i = \frac{\sum_{k=0}^n Y_k \mathbb{P}_{\theta^\ell}(Z_k = i\vert Y_{0:n})}{\sum_{k=0}^n \mathbb{P}_{\theta^\ell} (Z_k = i\vert Y_{0:n}) },$$
+---
+
+
+
+```{r tiger, fig.align= 'center', echo = FALSE, out.width = '30%'}
+ knitr::include_graphics(file.path(course_img_dir, "tiger.jpg"))
+```
+
+
+---
+template: stat
+
+## Statistical inference of incomplete data models 
+
+
+### Problem 3. States decoding
+
+Reconstruction of the hidden states.
+
+--
+
+.care[Solution 1:] easy-peasy
+
+$$\hat{Z}_k = \mathtt{argmax}_{s\in \mathcal{S}} \mathbb{P}_{\hat\theta}(Z_k =s \vert Y_{0:n} )$$  
+Recall : $\alpha_k(j) := \mathbb{P}_{\theta}(Y_{0:k}, Z_k = s_j )$
+
+Let's define $\beta_k(j) := \mathbb{P}_{\theta}(Y_{k:n}\vert Z_k = s_j ),$
+
+$\beta_k$ verifies a recursive equation
+
+$\beta_k(j) := \sum_{s\in\mathcal{S}} \Pi(j,s) g_{\theta_j}(y_{k+1}) \beta_{k+1}(s).$
+
+--
+$$\mathcal{P}_\theta(Z_k = j \vert Y_{0:n}) = \frac{\alpha_k(j) \beta_k(j) }{\mathbb{P}_\theta(Y_{0:n})}$$ 
+
+---
+
+
+```{r seals, fig.align= 'center', echo = FALSE, out.width = '60%'}
+ knitr::include_graphics(file.path(course_img_dir, "seal.jpg"))
+```
+
+
+---
+template: stat
+
+## Statistical inference of incomplete data models 
+
+
+### Problem 3. States decoding
+
+Reconstruction of the hidden states.
+
+--
+
+.care[Solution 1:] Best optimal pathway
+
+$$\hat{Z}_{0:n} = \mathtt{argmax}_{s_0, \ldots, s_n\in \mathcal{S}^{n+1}} \mathbb{P}_{\hat\theta}(Z_0=s_0, \ldots, Z_n=s_n \vert Y_{0:n} )$$  
+--
+
+Viterbi algorithm 
+
+---
+# Practical
+
+## Back to Red Footed booby 
+
+```{r sula, fig.align= 'center', echo = FALSE, out.height = '50%', out.width = '20%'}
+```
+
+
+```{r data_load}
+#remotes::install_github('marieetienne/coursesdata')
+data(fou, package='coursesdata')
+```
+
+
 
 ---
 

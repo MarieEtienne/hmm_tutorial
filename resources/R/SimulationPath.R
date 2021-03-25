@@ -30,19 +30,20 @@ movement <- tibble(phi = sapply(1:N, function(d){rwrpcauchy(1, location=mu.wc[St
                    V= exp(rnorm(N, mean=mu.ln[State]-sigma.ln[State]^2/2, sigma.ln[State])),
                    State = factor(State))
 
-movement %>% ggplot + geom_histogram(aes(x = phi, fill = State), alpha = 0.6, 
+p1 <- movement %>% ggplot + geom_histogram(aes(x = phi, fill = State), alpha = 0.6, 
                                      position = 'identity') + labs(x = 'Turning angle')
-movement %>% ggplot + geom_histogram(aes(x = V, fill = State), alpha = 0.6, 
+p2 <- movement %>% ggplot + geom_histogram(aes(x = V, fill = State), alpha = 0.6, 
                                      position = 'identity') + labs(x = 'Speed')
 
-movement %>% ggplot + geom_point(aes(x = phi, y = V, col = State)) + 
+p3 <- movement %>% ggplot + geom_point(aes(x = phi, y = V, col = State)) + 
   labs(x = 'Turning angle', y = 'Speed', col ='State')
 
 
 ## ---- pathPractical2
-movement <- movement %>% mutate(x = cumsum(c(cos(cumsum(phi))*V)),
-                    y = cumsum(c(sin(cumsum(phi))*V)), 
-                    date = as.POSIXlt(Sys.time()-12*24*3600 + cumsum(c(rep(10, N))), origin = "GMT")) %>% 
+movement <- movement %>% 
+  mutate(x = cumsum(c(cos(cumsum(phi))*V)),
+         y = cumsum(c(sin(cumsum(phi))*V)), 
+         date = as.POSIXlt(Sys.time()-12*24*3600 + cumsum(c(rep(10, N))), origin = "GMT")) %>%
   add_row(x=0, y= 0, date = Sys.time()-12*24*3600, State = 'Start') %>% 
   arrange(date) %>% 
   rowid_to_column("ID")
@@ -58,10 +59,12 @@ movement %>%
 
 ## ---- pathPractical3
 movement %>% 
-  ggplot() + geom_path(aes(x=x, y = y, col = State))+
+  ggplot() + geom_path(aes(x=x, y = y), alpha = 0.8)+
+  geom_point(aes(x=x, y = y, col = State), size = 0.2)+
   geom_point(data = filter(movement, State== 'Start'),
              size = 2, 
-             mapping = aes(x=x, y=y, col = State))
+             mapping = aes(x=x, y=y, col = State)) +
+  theme(legend.position = 'bottom')
 
 # Sampling section --------------------------------------------------------
 sample.path <- function( initial.path, acquisition.step=1)
