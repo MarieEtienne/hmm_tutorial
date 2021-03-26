@@ -183,7 +183,7 @@ If `\(\mathcal{L}_{Z_k \vert Z_{k-1}}\)` does not depend on `\(k\)`, the chain i
 
 A stationary Markov chain is described by 
 * its initial distribution `\(\nu\)` (a probability distribution on  `\(\mathcal{S}\)`),
-* its transition kernel `\(\mathbb{P}i(,)\)`
+* its transition kernel `\(\Pi(,)\)`
 
 
 ---
@@ -194,17 +194,17 @@ template: model
 If the state space is finite with `\(L\)` elements, `\(\mathcal{S} = \left\lbrace s_1, s_2, s_L\right\rbrace\)`, then
 
 * `\(\nu(k) =\mathbb{P}(Z_0=k)\)`
-* `\(\mathbb{P}i(i,j)=\mathbb{P}(X_k=j\vert X_{k-1}=i)\)` the transition matrix
+* `\(\Pi(i,j)=\mathbb{P}(X_k=j\vert X_{k-1}=i)\)` the transition matrix
 
 --
 
 Consequences
 
 * Probabilité d'observer une séquence
-  `$$\mathbb{P}(Z_0= z_0, Z_1=z_1, \ldots, Z_n = z_n) = \nu(z_0)\mathbb{P}i(z_0, z_1)\ldots \mathbb{P}i(z_{n-1}, z_n).$$`
+  `$$\mathbb{P}(Z_0= z_0, Z_1=z_1, \ldots, Z_n = z_n) = \nu(z_0)\Pi(z_0, z_1)\ldots \Pi(z_{n-1}, z_n).$$`
 
 * Probabilité d'être dans l'état `\(k\)` à l'instant `\(n\)`
-`$$\mathbb{P}( Z_k = z_k) = \nu\mathbb{P}i^{k} (z_k).$$`
+`$$\mathbb{P}( Z_k = z_k) = \nu\Pi^{k} (z_k).$$`
 
 
 --
@@ -212,7 +212,7 @@ Example :
 `$$\mathcal{S}=\left\lbrace A, B, C\right\rbrace,$$`
 `$$\nu =\left (0.1, 0.6, 0.3\right)^T$$`
 
-`$$\mathbb{P}i = \begin{pmatrix} 
+`$$\Pi = \begin{pmatrix} 
 0.9 &amp; 0.1 &amp; 0 \\
 0.1 &amp; 0.7 &amp; 0.2 \\
 0.1 &amp; 0.1 &amp; 0.8 \\
@@ -229,12 +229,12 @@ template: model
 `$$Y_k \vert Z_k=i \sim g_{\gamma_i}(.)$$`
 
 
-The full model is defined by `\(\theta=(\nu,\mathbb{P}i,\gamma).\)`
+The full model is defined by `\(\theta=(\nu,\Pi,\gamma).\)`
 --
 
 A simple example:
 
-* The hidden layer is given by `\((\mathcal{S},\nu,\mathbb{P}i)\)`
+* The hidden layer is given by `\((\mathcal{S},\nu,\Pi)\)`
 
 * The observation layer
 
@@ -292,7 +292,7 @@ template: model
 ## A two layers model - Directed Acyclic Graph
 
  
-* *Hidden layer* A sequence `\(Z_{0:n}\)` models the sequence of activities and is assumed to follow a Markov chain defined by  `\((\mathcal{S},\nu,\mathbb{P}i)\)`
+* *Hidden layer* A sequence `\(Z_{0:n}\)` models the sequence of activities and is assumed to follow a Markov chain defined by  `\((\mathcal{S},\nu,\Pi)\)`
 
 
 * *Observation layer* `\(Y_{0:n}\)` is defined conditionnally on `\(Z_{0:n}\)`
@@ -344,7 +344,7 @@ Sum over `\(K^N\)` terms
 
 .care[ Solution :] Filtering approach. `\(\alpha_k(j) := \mathbb{P}_{\theta}(Y_{0:k}, Z_k = s_j )\)`
 
-`$$\alpha_k(j) = \sum_{s\in\mathcal{S} }\mathbb{P}_{\theta}(Y_{0:k}, Z_{k-1}=s , Z_k = s_j ) = \sum_{s\in\mathcal{S} }\mathbb{P}_{\theta}(Y_k\vert Z_k=s_j)\mathbb{P}_{\theta}(Y_{0:k-1}, Z_k Z_{k-1}=s_i)$$`
+`$$\alpha_k(j) = \sum_{s\in\mathcal{S} }\mathbb{P}_{\theta}(Y_{0:k}, Z_{k-1}=s , Z_k = s_j ) = \sum_{s\in\mathcal{S} }\mathbb{P}_{\theta}(Y_k\vert Z_k=s_j)\mathbb{P}_{\theta}(Y_{0:k-1}, Z_k=s, Z_{k-1}=s_i)$$`
 `$$\alpha_k(j) = \sum_{s\in\mathcal{S} } \alpha_{k-1}(i) g_{\theta_j}(y_k) \Pi(s,j).$$`
 `$$\mathbb{P}_{\theta} (Y_{0:n}) =\sum_{j\in \mathcal{S}} \alpha_{j}.$$`
 
@@ -362,7 +362,7 @@ template: stat
 * Numerical optimization
 * Expectation-Maximization algorithm: 
 
-`$$\mathbb{E} \left( \log \mathbb{P}_{{ \gamma, \mathbb{P}i, \nu}}(Y_{0:n}, Z_{0:n})\vert Y_{0:n} \right)$$`
+`$$\mathbb{E} \left( \log \mathbb{P}_{{ \gamma, \Pi, \nu}}(Y_{0:n}, Z_{0:n})\vert Y_{0:n} \right)$$`
 
 
 
