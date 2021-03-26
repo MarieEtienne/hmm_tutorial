@@ -22,6 +22,7 @@ source(file = 'ICL.R')
 library(moveHMM)
 library(depmixS4)
 library(circular)
+library(coursesdata)
 ```
 
 ```{r ggplot_theme_set, cache = FALSE}
