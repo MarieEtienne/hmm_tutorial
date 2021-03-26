@@ -551,6 +551,26 @@ $$\hat{Z}_{0:n} = \mathtt{argmax}_{s_0, \ldots, s_n\in \mathcal{S}^{n+1}} \mathb
 
 Viterbi algorithm 
 
+
+See `r Citet(myBib, 'rabiner1989tutorial')` available [here](https://courses.physics.illinois.edu/ece417/fa2017/rabiner89.pdf) for a detailed explanation
+
+
+
+---
+# HMM extension
+
+
+
+* Dependendant observation see `r Citet(myBib, 'gloaguen2015autoregressive')`
+for an exemple where observation follow an AR process, but more complexe stochastic models are possible 
+
+* Accounting for covariates in transition `r Citet(myBib, 'michelot2016moveHMM')` [see tutorial]
+
+* Semi Hidden Markov process to escape the geometrical sojour time properties.
+
+* ...
+
+
 ---
 # Practical
 
