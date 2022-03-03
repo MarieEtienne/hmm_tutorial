@@ -177,7 +177,33 @@ template: intro
  knitr::include_graphics(file.path(course_img_dir, "sula_sula.jpg"))
 ```
 
+-- 
 
+```{r read_data, echo = TRUE}
+## remotes::install_github(MarieEtienne/coursesdata)
+data(fou_dta, package = 'coursesdata')
+```
+
+
+---
+template: intro
+## Movement ecology data
+
+### Our case study - data preparation 
+
+```{r data_prep, echo = TRUE}
+moveHMM_data <- fou_dta %>% 
+  as.data.frame() %>%
+  rowid_to_column( var = "id_point") %>% 
+  mutate(alt_scaled = scale(alt), dist_scaled = scale(dist.nid), dist_scaled_sq = scale(sqrt(dist.nid))) %>% 
+  moveHMM::prepData(type = "UTM", coordNames = c("Easting_smoothed",
+                                                "Northing_smoothed"))
+        
+```
+
+-- 
+* Explore data
+* Clustering 
 
 ---
 name: model
