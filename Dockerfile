@@ -19,6 +19,10 @@ RUN R -e "install.packages('magick')"
 RUN R -e "install.packages('ggfortify')"
 RUN R -e "install.packages('CircStats')"
 RUN R -e "remotes::install_github('MarieEtienne/coursesdata')"
+RUN R -e "install.packages('moveHMM')"
+RUN R -e "install.packages('animation')"
+RUN R -e "install.packages('kableExtra')"
+
 
 
 
