@@ -4,9 +4,9 @@
     <title>Hidden Markov models</title>
     <meta charset="utf-8" />
     <meta name="author" content="Marie-Pierre Etienne" />
-    <script src="libs/header-attrs-2.7/header-attrs.js"></script>
+    <script src="libs/header-attrs-2.11/header-attrs.js"></script>
     <link href="libs/remark-css-0.0.1/metropolis.css" rel="stylesheet" />
-    <link rel="stylesheet" href="../courses_tools/resources/mpe_pres.css" type="text/css" />
+    <link rel="stylesheet" href="mpe_pres.css" type="text/css" />
   </head>
   <body>
     <textarea id="source">
@@ -143,7 +143,40 @@ template: intro
 
 &lt;img src="../resources/figs/sula_sula.jpg" width="20%" height="50%" style="display: block; margin: auto;" /&gt;
 
+-- 
 
+
+```r
+## remotes::install_github(MarieEtienne/coursesdata)
+data(fou_dta, package = 'coursesdata')
+```
+
+
+---
+template: intro
+## Movement ecology data
+
+### Our case study - data preparation 
+
+
+```r
+moveHMM_data &lt;- fou_dta %&gt;% 
+  as.data.frame() %&gt;%
+  rowid_to_column( var = "id_point") %&gt;% 
+  mutate(alt_scaled = scale(alt), dist_scaled = scale(dist.nid), dist_scaled_sq = scale(sqrt(dist.nid))) %&gt;% 
+  moveHMM::prepData(type = "UTM", coordNames = c("Easting_smoothed",
+                                                "Northing_smoothed"))
+```
+
+```
+## Warning in moveHMM::prepData(., type = "UTM", coordNames =
+## c("Easting_smoothed", : There are 1542 missing covariate values. Each will be
+## replaced by the closest available value.
+```
+
+-- 
+* Explore data
+* Clustering 
 
 ---
 name: model
@@ -423,13 +456,6 @@ Increasing Q, increases  `\(\ln{\mathbb{P}_{\theta}(Y_{0:n})}\)`.
 
 
 
----
-
-
-
-&lt;img src="../resources/figs/lion.jpg" width="60%" style="display: block; margin: auto;" /&gt;
-
-
 
 ---
 template: stat
@@ -443,11 +469,6 @@ With EM algo, at step `\(\ell\)`
 
 
 `$$\hat{\mu}^{\ell+1}_i = \frac{\sum_{k=0}^n Y_k \mathbb{P}_{\theta^\ell}(Z_k = i\vert Y_{0:n})}{\sum_{k=0}^n \mathbb{P}_{\theta^\ell} (Z_k = i\vert Y_{0:n}) },$$`
----
-
-
-
-&lt;img src="../resources/figs/tiger.jpg" width="30%" style="display: block; margin: auto;" /&gt;
 
 
 ---
@@ -476,10 +497,6 @@ Let's define `\(\beta_k(j) := \mathbb{P}_{\theta}(Y_{k:n}\vert Z_k = s_j ),\)`
 --
 `$$\mathcal{P}_\theta(Z_k = j \vert Y_{0:n}) = \frac{\alpha_k(j) \beta_k(j) }{\mathbb{P}_\theta(Y_{0:n})}$$` 
 
----
-
-
-&lt;img src="../resources/figs/seal.jpg" width="60%" style="display: block; margin: auto;" /&gt;
 
 
 ---

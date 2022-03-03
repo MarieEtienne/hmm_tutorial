@@ -1,10 +1,74 @@
 @import url(https://fonts.googleapis.com/css?family=Fira+Sans:300,300i,400,400i,500,500i,700,700i);
 @import url(https://cdn.rawgit.com/tonsky/FiraCode/1.204/distr/fira_code.css);
 
-
 body {
   font-family: 'Fira Sans','Droid Serif', 'Palatino Linotype', 'Book Antiqua', Palatino, 'Microsoft YaHei', 'Songti SC', serif;
 }
+
+.addspace {
+  padding-top: 1em;
+}
+/* Math specificities*/
+.theorem {
+  padding-top: 1em;
+  display: block;
+  font-style: italic;
+  font-family: "avenir";
+  color: black;
+}
+
+.theorem::before {
+  content: "Theorem: ";
+  color: #c94326;
+  font-weight: bold;
+  font-style: normal;
+}
+.theorem[text]::before {
+  content: "Theorem (" attr(text) ") ";
+}
+.theorem p {
+  display: inline;
+}
+
+
+/* for background image in title slide */
+.title-slide {
+  background-image: url("background.png");
+  background-size: cover;
+}
+
+/*p:small text in bibliography*/
+.p:biblio {
+  font-size: 12px;
+}
+
+/* to add symbol at the top*/
+.logopos_right {
+  position: absolute;
+  top: 1%;
+  left: 2%;
+}
+
+.logopos_left {
+  position: absolute;
+  top: 1%;
+  left: 94%;
+}
+/*  add a side by side images */
+
+.column {
+  float: left;
+  width: 45%;
+  padding: 5px;
+}
+
+.row::after {
+  content: "";
+  clear: both;
+  display: table;
+}
+
+
 
 .remark-code, .remark-inline-code {
   font-family: 'Fira Code', 'Lucida Console', Monaco, monospace;
@@ -44,21 +108,37 @@ a, a > code {
 
 .question {
   background-color: #ecefef;
-  color: #B40F20;
+  color: #C94326;
   text-align: center;
   align-content: center;
   font-size: 110%;
   
 }
 
+/* Figure behaviour*/ 
+.centerimg{
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 50%;
+}
+
+.legend{
+  font-size: 15px;
+  font-style: italic;
+  text-align: center;
+  }
+  
+
+
 
 .care {
-  color: #B40F20;
+  color: #C94326;
   font-weight: 700;
 }
 
 .inverse h1, .inverse h2, .inverse h3 {
-  color: #145B63;
+  color: #DCFFC5;
 }
 
 
@@ -66,7 +146,7 @@ a, a > code {
 /* Two-column layout */
 .left-column {
   color: #777;
-  width: 20%;
+  width: 58%;
   height: 92%;
   float: left;
 }
@@ -74,7 +154,7 @@ a, a > code {
   color: #000;
 }
 .right-column {
-  width: 75%;
+  width: 38%;
   float: right;
   padding-top: 1em;
 }
@@ -85,6 +165,17 @@ a, a > code {
 .pull-right {
   float: right;
   width: 47%;
+}
+
+
+.pull-lefts {
+  float: left;
+    width: 42%;
+
+}
+.pull-rightb {
+  float: right;
+  width: 57%;
 }
 .pull-right + * {
   clear: both;
@@ -118,11 +209,11 @@ th, td { padding: 2px; }
 
 .remark-slide-content {
   background-color: #FAFAFA;
-  border-top: 60px solid #d4e7ed;
-  font-size: 17px;
+  border-top: 60px solid #33658A;
+  font-size: 19px;
   font-weight: 300;
   line-height: 1.5;
-  padding: 3% 2em 1em 2em
+  padding: 1% 2em 1em 2em
 }
 
 
@@ -146,19 +237,16 @@ th, td { padding: 2px; }
   border-top: 0px solid #FAFAFA;
 }
 
-.title-slide h1, h2, h3 {
-  text-align: center;
-  color: #0B775E;
-}
+
 
 h1 {
   font-weight: normal;
-  margin-top: -80px;
+  margin-top: -60px;
   margin-left: -00px;
-  color: #F2AD00;
+  color: #F7A913;
 }
 
-h2,  {
+h2  {
   padding-top: -15px;
   padding-bottom: 00px;
   color: #46ACC8;
@@ -182,10 +270,13 @@ h3, h4 {
 }
 .remark-slide-content h1 {
   font-size: 27px;
+  position: absolute;
+  left:10%;
 }
 
 .remark-slide-content h2 {
   font-size: 23px;
+  color: #33658A;
 }
 
 .remark-slide-content h3 {
@@ -203,37 +294,37 @@ h3, h4 {
 .title-slide {
   background-color: #FAFAFA;
   border-top: 80px solid #FAFAFA;
+  color: #DCFFC5;
  
 }
 
 
-
-
 .title-slide h1  {
-  color: #1A292C;
+  color: #33658A;
   font-size: 40px;
   text-shadow: none;
   font-weight: 400;
-  text-align: left;
+  text-align: center;
   margin-left: 15px;
-  padding-top: 80px;
+  margin-top: -200px;
+  padding-top:80px;
 }
 .title-slide h2  {
   margin-top: -25px;
   padding-bottom: -20px;
-  color: #B40F20;
+  color: #1F908E;
   text-shadow: none;
   font-weight: 300;
   font-size: 35px;
-  text-align: left;
+  text-align: center;
   margin-left: 15px;
 }
 .title-slide h3  {
-  color: #1A292C;
+  color: #1F908E;
   text-shadow: none;
   font-weight: 300;
   font-size: 25px;
-  text-align: left;
+  text-align: right;
   margin-left: 15px;
   margin-bottom: -30px;
 }
