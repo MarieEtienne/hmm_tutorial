@@ -7,7 +7,7 @@ date: "Mars 2021"
 csl: "../resources/apa-no-doi-no-issue.csl"
 output:
    xaringan::moon_reader:
-    css: [  'metropolis',  '../courses_tools/resources/mpe_pres.css']
+    css: [  'metropolis',  'mpe_pres.css']
     lib_dir: libs
     nature:
       ratio: 16:10
