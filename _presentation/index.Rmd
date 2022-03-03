@@ -467,15 +467,6 @@ Increasing Q, increases  $\ln{\mathbb{P}_{\theta}(Y_{0:n})}$.
 
 
 
----
-
-
-
-```{r lions, fig.align= 'center', echo = FALSE, out.width = '60%'}
- knitr::include_graphics(file.path(course_img_dir, "lion.jpg"))
-```
-
-
 
 ---
 template: stat
@@ -489,13 +480,6 @@ With EM algo, at step $\ell$
 
 
 $$\hat{\mu}^{\ell+1}_i = \frac{\sum_{k=0}^n Y_k \mathbb{P}_{\theta^\ell}(Z_k = i\vert Y_{0:n})}{\sum_{k=0}^n \mathbb{P}_{\theta^\ell} (Z_k = i\vert Y_{0:n}) },$$
----
-
-
-
-```{r tiger, fig.align= 'center', echo = FALSE, out.width = '30%'}
- knitr::include_graphics(file.path(course_img_dir, "tiger.jpg"))
-```
 
 
 ---
@@ -524,12 +508,6 @@ $\beta_k(j) := \sum_{s\in\mathcal{S}} \Pi(j,s) g_{\theta_j}(y_{k+1}) \beta_{k+1}
 --
 $$\mathcal{P}_\theta(Z_k = j \vert Y_{0:n}) = \frac{\alpha_k(j) \beta_k(j) }{\mathbb{P}_\theta(Y_{0:n})}$$ 
 
----
-
-
-```{r seals, fig.align= 'center', echo = FALSE, out.width = '60%'}
- knitr::include_graphics(file.path(course_img_dir, "seal.jpg"))
-```
 
 
 ---
